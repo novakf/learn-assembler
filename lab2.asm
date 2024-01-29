@@ -1,103 +1,63 @@
 MYCODE SEGMENT 'CODE'
-     ASSUME CS:MYCODE    
-     PUBLIC LET 
-     LET DB 'А' 
-     TABLHEX DB '0123456789ABCDEF'
-;Выполнил Новиков Б. ИУ5-44Б
-;Очистка экрана
-CLRSCR PROC
-     MOV AX, 03
-     INT 10H
-     RET
-CLRSCR ENDP
+ ASSUME CS: MYCODE
+ PUBLIC LET
+LET0 DB 'Н'
+;Новиков Богдан ИУ5-44б ЛР3
+LET DB 'А'
+START:
+; ЗАГРУЗКА СЕГМЕНТНОГО РЕГИСТРА ДАННЫХ DS
+ PUSH CS
+ POP DS
+; ВЫВОД Б
+ MOV DL, LET0
+ CALL PUTCH
+ CALL CRLF
+; ВЫВОД ОДНОГО СИМВОЛА НА ЭКРАН
+ MOV DL, LET
+ CALL PUTCH
+; ПЕРЕВОД СТРОКИ
+ CALL CRLF
+; ВЫВОД СЛЕДУЮЩИХ ДВУХ СИМВОЛОВ
+ ADD LET, 1
+ MOV DL, LET
+ CALL PUTCH
+ CALL CRLF
 
-;Вывод символа на экран
-PUTCH PROC
-    MOV ah, 02h
-    INT 21h
-    RET
-PUTCH ENDP
+ ADD LET, 1
+ MOV DL, LET
+ CALL PUTCH
+ CALL CRLF
 
-;Перевод строки
+; ОЖИДАНИЕ ЗАВЕРШЕНИЯ ПРОГРАММЫ
+ CALL GETCH
+
+; ВЫХОД ИЗ ПРОГРАММЫ
+ MOV AL, 0
+ MOV AH, 4CH
+ INT 21H
+
+; ПРОЦЕДУРА ПЕРЕВОДА СТРОКИ
 CRLF PROC
-    MOV dl, 0dh
-    CALL PUTCH
-    MOV dl, 0ah
-    CALL PUTCH
-    RET
+ MOV DL, 10
+ CALL PUTCH
+ MOV DL, 13
+ CALL PUTCH
+ RET
 CRLF ENDP
 
-;Ввод символа с клавиатуры
+; ПРОЦЕДУРА ВЫВОДА СИМВОЛА
+PUTCH PROC
+ MOV AH, 02H
+ INT 021H
+ RET
+PUTCH ENDP
+
+; ПРОЦЕДУРА ВВОДА СИМВОЛА
 GETCH PROC
-    MOV ah, 01h
-    INT 21h
-    RET
+ MOV AH, 01H
+ INT 021H
+ RET
 GETCH ENDP
-
-;Перекодировка символа
-HEX PROC
-    PUSH DX
-;1-я цифра (DL=А лат)
-    MOV AL, DL    ;пусть AL = 41h
-    SHR AL, 4     ;сдвиг вправо на 4р
-    LEA BX, TABLHEX
-    XLAT          ;перекодировка
-    MOV DL, AL   
-    CALL PUTCH
-    POP DX
-;2-я цифра
-    MOV AL, DL
-    AND AL, 0FH   ;Маскирование And
-    XLAT          ;Перекодировка
-    MOV DL, AL    
-    CALL PUTCH
-    MOV DL, 'h'   ;Вывод символа в DL = 'h'
-    CALL PUTCH
-    RET
-HEX ENDP
-
-;Начало выполнения программы
-START: 
-PUSH CS
-POP DS 
- 
-LOOPING:
-CALL CLRSCR
-CALL CRLF
-MOV CX, 20   
-
-MYLOOP: 
-;Выводим символ
-MOV DL, LET
-CALL PUTCH 
-
-MOV DL, ' '
-CALL PUTCH
-MOV DL, '-'
-CALL PUTCH
-MOV DL, ' '
-CALL PUTCH
-
-MOV DL,LET
-;Перекодировка
-CALL HEX  
-
-;Повторяем для следующего символа
-ADD LET,1
-CALL CRLF
-LOOP MYLOOP  
- 
-;Ввод нового  символа и сравнение с '*'
-CALL GETCH
-MOV LET, AL
-CMP LET, '*'
-JNE LOOPING     
-CALL CLRSCR
-
-;Выход из программы
-MOV AL, 5
-MOV AH, 4CH
-INT 21H  
- 
+; ПРОЦЕДУРА ОЧИСТКИ ЭКРАНА
 MYCODE ENDS
 END START

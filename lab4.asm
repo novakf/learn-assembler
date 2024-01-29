@@ -1,150 +1,161 @@
-MYDATA SEGMENT 'DATA'
-    BUF DB 20 DUP ('1')
-    SURNAME DB 'Новиков','$'
-    SURNAME_LEN DB 7 
-    NO_PARAMS DB 'Нет введеных параметров $'
-    FIRST_PARAM DB '1-ый параметр $'
-    CORRECT DB 'правильный = $'
-    INCORRECT DB 'неправильный$'
-    SECOND_CORRECT DB '2-ой параметр есть$'
-    SECOND_INCORRECT DB '2-ой параметр отсутствует$'
-MYDATA ENDS
-
 MYCODE SEGMENT 'CODE'
- ASSUME CS:MYCODE,DS:MYDATA
+    ASSUME CS:MYCODE, DS:MYCODE    
+    TABLHEX DB '0123456789ABCDEF'
+    Welcome DB 'Введите строку, чтобы выйти введите *$'
+	StringLimit DB 'Превышен лимит$'       
+	Buf DB 21 DUP (' '), '$' 
+
+;Новиков Богдан ИУ5-44Б
+
+PRINTSTR PROC
+    MOV ah, 09h
+	INT 021h
+	RET
+PRINTSTR ENDP
+
+CLRSCR PROC
+    MOV AX, 03
+    INT 10H
+    RET
+CLRSCR ENDP
 
 PUTCH PROC
-    MOV AH , 02H
-    INT 021H
+    MOV ah, 02h
+    INT 21h
     RET
 PUTCH ENDP
 
-CRLF PROC
-    MOV DL , 10
+CLRF PROC
+    MOV dl, 0dh
     CALL PUTCH
-    MOV DL , 13
+    MOV dl, 0ah
     CALL PUTCH
     RET
-CRLF ENDP
+CLRF ENDP
 
 GETCH PROC
-    MOV AH,01H
-    INT 21H
+    MOV ah, 08h
+    INT 21h
     RET
 GETCH ENDP
 
-CLRS PROC
-    MOV AH,00
-    MOV AL,03
-    INT 10h
+;Перекодировка символа
+HEX PROC
+    PUSH DX
+;1-я цифра (DL=А лат)
+    MOV AL, DL    ;пусть AL = 41h
+    SHR AL, 4     ;сдвиг вправо на 4р
+    LEA BX, TABLHEX
+    XLAT          ;перекодировка
+    MOV DL, AL   
+    CALL PUTCH
+    POP DX
+;2-я цифра
+    MOV AL, DL
+    AND AL, 0FH   ;Маскирование And
+    XLAT          ;Перекодировка
+    MOV DL, AL    
+    CALL PUTCH
+    MOV DL, 'h'   ;Вывод символа в DL = 'h'
+    CALL PUTCH
     RET
-CLRS ENDP
-
-PRINT PROC
-    PUSH AX
-	MOV AH, 09h    ;09H вывод строк
-	INT 21H
-	POP AX
-	RETN
-PRINT ENDP
+HEX ENDP
 
 START:
-    MOV AX, MYDATA
-	MOV ES, AX
-
-    MOV SI, 80H
-    MOV CL, [SI]
-    CMP CL, 0
-    JNE CONTINUE
-
-    PUSH ES
+    PUSH CS
     POP DS
 
-    LEA DX, NO_PARAMS
-    CALL PRINT
-    JMP EXIT
+MAIN:
+	CALL CLRSCR
+	MOV DX, OFFSET Welcome
+	CALL PRINTSTR
+	CALL CLRF
 
-CONTINUE:
-    SUB CL, 1
+GETSTRING:
+	MOV SI, 0
+	LEA BX, Buf
     
-    ADD SI, 2 ;переход к первому аргументу
+	CALL GETCH
+   	MOV BX[SI], AL
 
-    CYCLE:
-        MOV AL, [SI]
-        CMP AL, ' '
-        JE COPY
-        INC SI
-    LOOP CYCLE
-
-COPY:
-    SUB SI, 82H ;число символов в аргументе
-    PUSH SI
-    PUSH SI
-    
-    MOV SI, 80H
-    MOV CL ,[SI]
-    SUB CL, 1
-
-    CLD
-    MOV SI, 82H  
-    LEA DX, BUF
-    REP MOVSB ;пересылка по байтам или словам
-    PUSH ES
-    POP DS
-    
-    LEA DI, BUF
-    LEA SI, SURNAME
-    POP CX
-
-    CMP CL, SURNAME_LEN
-    JGE COMPARE
-    MOV CL, SURNAME_LEN
-
-
-COMPARE:
-    LEA DX, FIRST_PARAM
-    CALL PRINT
-
-    REPE CMPSB
-    JE FIRST_OK
-
-    ;если не равны
-    LEA DX, INCORRECT
-    CALL PRINT
-    CALL CRLF
-    JMP SECOND_ARG
-
-FIRST_OK:
-    LEA DX, CORRECT
-    CALL PRINT
-    LEA DX, SURNAME
-    CALL PRINT	
-    CALL CRLF
-
-SECOND_ARG:
-    MOV SI, OFFSET BUF
-    POP CX
-    ADD SI, CX
-    
-    MOV AL, [SI]
-    CMP AL, ' '
-    JE SECOND_OK
-    LEA DX, SECOND_INCORRECT
-    CALL PRINT
-    CALL CRLF
-    JMP EXIT
-
-SECOND_OK:
-    LEA DX, SECOND_CORRECT
-    CALL PRINT
-    CALL CRLF
-
-    EXIT:
-	MOV AL, 0
-	MOV AH, 4CH
-	INT 21H
-    RETN
+    ;* - выход
+	CMP AL, "*"
+	JE EXIT
+    ;$ - конец строки
+	CMP AL, '$'
+	JE PRINTSTRING                 
 	
+	;Если не $ и * - печатаем
+	MOV DX, AX
+	CALL PUTCH
+	INC SI
+		
+GETSYM:	
+	CALL GETCH
+	MOV BX[SI], AL
+	
+	CMP AL, "$"
+	JE PRINTSTRING
+	
+	MOV DX, AX
+	CALL PUTCH
 
+	CMP SI, 19
+	JE STRLIM
+	
+	INC SI
+	JMP GETSYM
+	
+PRINTSTRING:   	 
+	;пустая строка
+	MOV AX, [BX]
+	CMP AL, '$'
+	JE HANDLER
+	
+	MOV DX, 32
+	CALL PUTCH
+	MOV DX, '='
+	CALL PUTCH
+
+PrintHex:
+	XOR SI, SI
+PrintHexSym:
+	MOV AX, BX[SI]
+	
+    CMP AL, '$'
+	JE HANDLER
+
+	MOV DX, 32
+	CALL PUTCH
+
+	;Перекодировка
+	MOV DX, BX[SI]
+	PUSH BX
+	CALL HEX
+	POP BX	  
+	
+	;Следующий
+	INC SI
+	JMP PrintHexSym
+
+;$
+HANDLER:
+	CALL CLRF
+	JMP GETSTRING
+
+STRLIM:
+	MOV AX, '$'
+	MOV BX[SI], AL
+	CALL clrf
+	MOV DX, OFFSET StringLimit
+	CALL printstr
+	CALL clrf
+	JE PrintHex
+
+EXIT:
+    MOV AL, 0
+    MOV AH, 4CH
+    INT 21H  
+ 
 MYCODE ENDS
-	END START
+END START

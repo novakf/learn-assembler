@@ -1,40 +1,35 @@
 MYCODE SEGMENT 'CODE'
-    ASSUME CS:MYCODE, DS:MYCODE    
-    TABLHEX DB '0123456789ABCDEF'
-    Welcome DB 'Введите строку, чтобы выйти введите *$'
-	StringLimit DB 'Превышен лимит$'       
-	Buf DB 21 DUP (' '), '$' 
-
-;Новиков Богдан ИУ5-44Б
-
-PRINTSTR PROC
-    MOV ah, 09h
-	INT 021h
-	RET
-PRINTSTR ENDP
-
+     ASSUME CS:MYCODE    
+     PUBLIC LET 
+     LET DB 'А' 
+     TABLHEX DB '0123456789ABCDEF'
+;Выполнил Новиков Б. ИУ5-44Б
+;Очистка экрана
 CLRSCR PROC
-    MOV AX, 03
-    INT 10H
-    RET
+     MOV AX, 03
+     INT 10H
+     RET
 CLRSCR ENDP
 
+;Вывод символа на экран
 PUTCH PROC
     MOV ah, 02h
     INT 21h
     RET
 PUTCH ENDP
 
-CLRF PROC
+;Перевод строки
+CRLF PROC
     MOV dl, 0dh
     CALL PUTCH
     MOV dl, 0ah
     CALL PUTCH
     RET
-CLRF ENDP
+CRLF ENDP
 
+;Ввод символа с клавиатуры
 GETCH PROC
-    MOV ah, 08h
+    MOV ah, 01h
     INT 21h
     RET
 GETCH ENDP
@@ -61,101 +56,48 @@ HEX PROC
     RET
 HEX ENDP
 
-START:
-    PUSH CS
-    POP DS
+;Начало выполнения программы
+START: 
+PUSH CS
+POP DS 
+ 
+LOOPING:
+CALL CLRSCR
+CALL CRLF
+MOV CX, 20   
 
-MAIN:
-	CALL CLRSCR
-	MOV DX, OFFSET Welcome
-	CALL PRINTSTR
-	CALL CLRF
+MYLOOP: 
+;Выводим символ
+MOV DL, LET
+CALL PUTCH 
 
-GETSTRING:
-	MOV SI, 0
-	LEA BX, Buf
-    
-	CALL GETCH
-   	MOV BX[SI], AL
+MOV DL, ' '
+CALL PUTCH
+MOV DL, '-'
+CALL PUTCH
+MOV DL, ' '
+CALL PUTCH
 
-    ;* - выход
-	CMP AL, "*"
-	JE EXIT
-    ;$ - конец строки
-	CMP AL, '$'
-	JE PRINTSTRING                 
-	
-	;Если не $ и * - печатаем
-	MOV DX, AX
-	CALL PUTCH
-	INC SI
-		
-GETSYM:	
-	CALL GETCH
-	MOV BX[SI], AL
-	
-	CMP AL, "$"
-	JE PRINTSTRING
-	
-	MOV DX, AX
-	CALL PUTCH
+MOV DL,LET
+;Перекодировка
+CALL HEX  
 
-	CMP SI, 19
-	JE STRLIM
-	
-	INC SI
-	JMP GETSYM
-	
-PRINTSTRING:   	 
-	;пустая строка
-	MOV AX, [BX]
-	CMP AL, '$'
-	JE HANDLER
-	
-	MOV DX, 32
-	CALL PUTCH
-	MOV DX, '='
-	CALL PUTCH
+;Повторяем для следующего символа
+ADD LET,1
+CALL CRLF
+LOOP MYLOOP  
+ 
+;Ввод нового  символа и сравнение с '*'
+CALL GETCH
+MOV LET, AL
+CMP LET, '*'
+JNE LOOPING     
+CALL CLRSCR
 
-PrintHex:
-	XOR SI, SI
-PrintHexSym:
-	MOV AX, BX[SI]
-	
-    CMP AL, '$'
-	JE HANDLER
-
-	MOV DX, 32
-	CALL PUTCH
-
-	;Перекодировка
-	MOV DX, BX[SI]
-	PUSH BX
-	CALL HEX
-	POP BX	  
-	
-	;Следующий
-	INC SI
-	JMP PrintHexSym
-
-;$
-HANDLER:
-	CALL CLRF
-	JMP GETSTRING
-
-STRLIM:
-	MOV AX, '$'
-	MOV BX[SI], AL
-	CALL clrf
-	MOV DX, OFFSET StringLimit
-	CALL printstr
-	CALL clrf
-	JE PrintHex
-
-EXIT:
-    MOV AL, 0
-    MOV AH, 4CH
-    INT 21H  
+;Выход из программы
+MOV AL, 5
+MOV AH, 4CH
+INT 21H  
  
 MYCODE ENDS
 END START
